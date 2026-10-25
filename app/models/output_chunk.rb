@@ -1,0 +1,2 @@
+class OutputChunk < ApplicationRecord
+end

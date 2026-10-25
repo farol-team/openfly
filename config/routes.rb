@@ -1,0 +1,26 @@
+Rails.application.routes.draw do
+  get "/health", to: "health#show"
+  get "/live", to: "health#live"
+  get "/ready", to: "health#ready"
+  scope "/v1" do
+    get "operator/status", to: "api#operator_status"
+    get "templates", to: "api#templates"
+    get "quota", to: "api#quota"
+    post "artifacts", to: "api#create_artifact"
+    get "artifacts/:id", to: "api#artifact"
+    put "artifacts/:id/content", to: "api#upload"
+    get "artifacts/:id/content", to: "api#download"
+    post "sessions", to: "api#create_session"
+    get "sessions/:id", to: "api#show_session"
+    delete "sessions/:id", to: "api#terminate"
+    post "secret-bindings", to: "api#create_secret"
+    delete "secret-bindings/:id", to: "api#revoke_secret"
+    post "sessions/:id/operations", to: "api#create_operation"
+    get "operations/:id", to: "api#operation"
+    post "operations/:id/heartbeat", to: "api#heartbeat"
+    post "operations/:id/cancel", to: "api#cancel"
+    post "operations/:id/acknowledgement", to: "api#acknowledge"
+    get "operations/:id/output", to: "api#output"
+    get "sessions/:id/events", to: "api#events"
+  end
+end

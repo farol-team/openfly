@@ -1,0 +1,2 @@
+class PoolEvent < ApplicationRecord
+end

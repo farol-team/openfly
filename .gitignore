@@ -1,0 +1,9 @@
+.env*
+!.env.example
+.bundle/
+log/
+tmp/
+storage/
+coverage/
+__pycache__/
+*.pyc

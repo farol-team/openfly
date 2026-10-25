@@ -1,0 +1,2 @@
+class WorkspaceLock < ApplicationRecord
+end

@@ -1,0 +1,16 @@
+#!/usr/bin/env ruby
+require_relative "../config/environment"
+worker=Pool::Worker.new(provider:Pool::Bridge.new)
+stopping=false
+Signal.trap('TERM') { stopping=true }
+Signal.trap('INT') { stopping=true }
+Pool::Heartbeat.new('execution').around do
+  until stopping
+    begin
+      sleep 1 unless worker.run_once
+    rescue StandardError => error
+      warn "OpenFly execution tick failed (#{error.class.name})"
+      sleep 2
+    end
+  end
+end

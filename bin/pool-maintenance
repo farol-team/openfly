@@ -1,0 +1,17 @@
+#!/usr/bin/env ruby
+require_relative "../config/environment"
+maintenance=Pool::Maintenance.new
+stopping=false
+Signal.trap('TERM') { stopping=true }
+Signal.trap('INT') { stopping=true }
+Pool::Heartbeat.new('maintenance').around do
+  until stopping
+    begin
+      maintenance.tick
+    rescue StandardError => error
+      warn "OpenFly maintenance tick failed (#{error.class.name})"
+    end
+    sleep 1
+  end
+  maintenance.shutdown
+end

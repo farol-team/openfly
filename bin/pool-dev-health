@@ -1,0 +1,8 @@
+#!/bin/sh
+# Explicit local development only. Run alongside the worker.
+set -eu
+cd "$(dirname "$0")/.."
+while true; do
+  bin/pool-admin dev-health
+  sleep 30
+done

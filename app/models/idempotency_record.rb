@@ -1,0 +1,2 @@
+class IdempotencyRecord < ApplicationRecord
+end

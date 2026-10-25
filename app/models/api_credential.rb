@@ -1,0 +1,2 @@
+class ApiCredential < ApplicationRecord
+end

@@ -1,0 +1,2 @@
+class SecretBinding < ApplicationRecord
+end

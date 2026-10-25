@@ -1,0 +1,25 @@
+[Unit]
+Description=OpenFly %i
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=openfly
+Group=openfly
+WorkingDirectory=/srv/openfly
+EnvironmentFile=/etc/openfly.env
+ExecStart=/srv/openfly/bin/pool-%i
+Restart=on-failure
+RestartSec=3
+TimeoutStopSec=2100
+KillMode=control-group
+UMask=0077
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/var/lib/openfly /dev/shm/openfly-secrets
+
+[Install]
+WantedBy=multi-user.target

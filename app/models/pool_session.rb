@@ -1,0 +1,2 @@
+class PoolSession < ApplicationRecord
+end

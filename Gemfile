@@ -1,0 +1,5 @@
+source "https://rubygems.org"
+gem "rails", "8.1.4"
+gem "pg", "1.7.0"
+gem "puma", "8.0.2"
+gem "json_schemer", "2.5.0"

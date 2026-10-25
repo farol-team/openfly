@@ -1,0 +1,50 @@
+#!/usr/bin/env ruby
+require_relative "../config/environment"
+require "open3"
+command=ARGV.shift
+case command
+when "status"
+  puts JSON.pretty_generate(Pool::Observability.new.call)
+when "dev-bootstrap"
+  abort "Development only; Docker test provider must be explicitly enabled" unless Rails.env.development? && ENV['POOL_ALLOW_DOCKER_TEST']=='1'
+  destination=File.expand_path(ARGV.shift || abort("Usage: bin/pool-admin dev-bootstrap PRIVATE_TOKEN_FILE"))
+  abort "Refusing to overwrite token file" if File.exist?(destination)
+  image=ENV.fetch('POOL_DEV_IMAGE','cofounder-microvm-runtime:test')
+  output,status=Open3.capture2e('docker','image','inspect','--format','{{.Id}}',image)
+  abort "Existing local test image unavailable" unless status.success?
+  digest=output.strip
+  template=RuntimeTemplate.find_or_create_by!(id:'cofounder-docker-test-v1') do |t|
+    t.image_digest=digest;t.resource_profiles={standard:{vcpus:1,memory_mib:1024,disk_mib:512}}
+    t.network_profiles={offline:{deny_out:['0.0.0.0/0','::/0']}};t.secret_slots={model:{}}
+  end
+  abort "Image changed; register a new immutable template" unless template.image_digest==digest
+  node=Node.find_or_initialize_by(name:'local-docker-test')
+  node.update!(provider:'docker_test',state:'offline',vcpus:2,memory_mib:2048,disk_mib:1024,config:{template_ids:[template.id],network_profiles:['offline']})
+  tokens={}
+  ApplicationRecord.transaction do
+    %w[cofounder duke42].each do |name|
+      tenant=Tenant.find_or_create_by!(name:name) { |t| t.template_ids=[template.id];t.max_vcpus=1;t.max_memory_mib=1024 }
+      tokens[name]={tenant_id:tenant.id,token:Pool::Auth.issue!(tenant)}
+    end
+    File.open(destination,File::WRONLY|File::CREAT|File::EXCL,0o600) { |f| f.write(JSON.pretty_generate(tokens));f.flush;f.fsync }
+  end
+  puts "Two isolated tenant credentials saved to private file. Node remains offline until health check."
+when "dev-health"
+  abort "Development test nodes only" unless Rails.env.development? && ENV['POOL_ALLOW_DOCKER_TEST']=='1'
+  _,status=Open3.capture2e('docker','info','--format','{{.ServerVersion}}')
+  # Daemon reachability is a development liveness probe, not a KVM/network admission test.
+  Node.where(provider:'docker_test').where.not(state:'draining').each do |node|
+    images=node.config.fetch('template_ids',[]).map { |id| RuntimeTemplate.find(id).image_digest }
+    usable=status.success? && images.any? && images.all? { |id| Open3.capture2e('docker','image','inspect',id).last.success? }
+    node.update!(state:usable ? 'ready' : 'offline',checked_at:Time.current)
+  end
+  puts "Development liveness checked"
+when "drain"
+  Node.find(ARGV.fetch(0)).update!(state:'draining')
+  puts "New scheduling disabled; existing reservations retained"
+when "revoke-tenant"
+  ApiCredential.where(tenant_id:Tenant.find(ARGV.fetch(0)).id,revoked_at:nil).update_all(revoked_at:Time.current)
+  puts "Tenant credentials revoked"
+else
+  abort "Commands: status | dev-bootstrap PRIVATE_TOKEN_FILE | dev-health | drain NODE_ID | revoke-tenant TENANT_ID"
+end
